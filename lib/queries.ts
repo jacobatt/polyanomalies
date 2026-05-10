@@ -4,7 +4,10 @@
 
 import { serverAnonClient } from "./supabase";
 import { rowToTrade } from "./mappers";
-import type { Trade, TradeRow } from "./types";
+import type { Trade, TradeRow, TopMarket, TopWallet } from "./types";
+
+const ANOMALY_SCORE = 4;
+const AGGREGATION_LIMIT = 5000;     // upper bound on rows pulled for top-N rollups
 
 const TRADE_COLS = [
   "id", "timestamp", "condition_id", "title", "slug", "category",
@@ -57,6 +60,91 @@ export async function fetchTrades(opts: TradeQuery): Promise<Trade[]> {
   const { data, error } = await query;
   if (error) throw new Error(`fetchTrades: ${error.message}`);
   return (data ?? []).map((row) => rowToTrade(row as unknown as TradeRow));
+}
+
+/** Internal helper: pull every scored trade in a window for aggregation.
+ *  Uses a higher cap than the feed because top-N rollups need full coverage,
+ *  not just the most-recent 200. */
+async function fetchScoredWindow(since: number): Promise<Trade[]> {
+  const sb = serverAnonClient();
+  const { data, error } = await sb
+    .from("trades")
+    .select(
+      [
+        "id", "timestamp", "condition_id", "title", "slug", "category",
+        "proxy_wallet", "asset", "side", "outcome", "outcome_index",
+        "size", "price", "notional", "transaction_hash",
+        "name", "pseudonym", "score", "notional_score", "counter_trend",
+      ].join(","),
+    )
+    .gte("timestamp", since)
+    .not("score", "is", null)
+    .order("timestamp", { ascending: false })
+    .limit(AGGREGATION_LIMIT);
+  if (error) throw new Error(`fetchScoredWindow: ${error.message}`);
+  return (data ?? []).map((row) => rowToTrade(row as unknown as TradeRow));
+}
+
+/** Top markets in window by total notional, with anomaly count and last
+ *  observed price. Aggregates over feed-eligible (scored) trades only. */
+export async function fetchTopMarkets(opts: { since: number; limit?: number }): Promise<TopMarket[]> {
+  const trades = await fetchScoredWindow(opts.since);
+  const byMarket = new Map<string, TopMarket>();
+  const lastTsByMarket = new Map<string, number>();
+  for (const t of trades) {
+    const cur = byMarket.get(t.market.id) ?? {
+      id: t.market.id,
+      title: t.market.title,
+      category: t.market.category,
+      notional: 0,
+      tradeCount: 0,
+      anomalyCount: 0,
+      lastPrice: null,
+    };
+    cur.notional += t.notional;
+    cur.tradeCount += 1;
+    if ((t.score ?? 0) >= ANOMALY_SCORE) cur.anomalyCount += 1;
+    if (t.ts > (lastTsByMarket.get(t.market.id) ?? 0)) {
+      lastTsByMarket.set(t.market.id, t.ts);
+      cur.lastPrice = t.price;
+    }
+    byMarket.set(t.market.id, cur);
+  }
+  return [...byMarket.values()]
+    .sort((a, b) => b.notional - a.notional)
+    .slice(0, opts.limit ?? 20);
+}
+
+/** Top wallets in window by total notional, with trade count and distinct
+ *  market count. win_rate is null in v1 — needs PnL calc, deferred. */
+export async function fetchTopWallets(opts: { since: number; limit?: number }): Promise<TopWallet[]> {
+  const trades = await fetchScoredWindow(opts.since);
+  const byWallet = new Map<string, TopWallet>();
+  const marketsByWallet = new Map<string, Set<string>>();
+  for (const t of trades) {
+    const cur = byWallet.get(t.wallet.wallet) ?? {
+      wallet: t.wallet.wallet,
+      name: t.wallet.name,
+      pseudonym: t.wallet.pseudonym,
+      notional: 0,
+      tradeCount: 0,
+      marketCount: 0,
+      winRate: null,
+    };
+    cur.notional += t.notional;
+    cur.tradeCount += 1;
+    let markets = marketsByWallet.get(t.wallet.wallet);
+    if (!markets) {
+      markets = new Set<string>();
+      marketsByWallet.set(t.wallet.wallet, markets);
+    }
+    markets.add(t.market.id);
+    cur.marketCount = markets.size;
+    byWallet.set(t.wallet.wallet, cur);
+  }
+  return [...byWallet.values()]
+    .sort((a, b) => b.notional - a.notional)
+    .slice(0, opts.limit ?? 20);
 }
 
 /** Distinct non-null categories, sourced from the `markets` view (one row

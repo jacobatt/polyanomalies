@@ -54,6 +54,28 @@ export interface AlertRule {
   created_at: string;      // ISO 8601
 }
 
+// Aggregations for the right-column cards.
+
+export interface TopMarket {
+  id: string;                   // condition_id
+  title: string;
+  category: string | null;
+  notional: number;             // sum of notional in window
+  tradeCount: number;
+  anomalyCount: number;         // trades with score >= 4
+  lastPrice: number | null;
+}
+
+export interface TopWallet {
+  wallet: string;               // proxy_wallet
+  name: string | null;
+  pseudonym: string | null;
+  notional: number;
+  tradeCount: number;
+  marketCount: number;          // distinct condition_ids touched
+  winRate: number | null;       // null in v1 — needs PnL calc
+}
+
 // Raw row shapes — what we read from Supabase. Use only inside lib/mappers.ts.
 
 export interface TradeRow {

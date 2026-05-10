@@ -1,6 +1,12 @@
 import { Shell } from "@/components/Shell";
 import { Dashboard } from "@/components/Dashboard";
-import { fetchTrades, fetchCategories, parseSince } from "@/lib/queries";
+import {
+  fetchTrades,
+  fetchCategories,
+  fetchTopMarkets,
+  fetchTopWallets,
+  parseSince,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +19,21 @@ export default async function Page({
 }) {
   const sp = await searchParams;
   const since = parseSince(sp.since);
-  const [trades, categories] = await Promise.all([
+  const [trades, categories, topMarkets, topWallets] = await Promise.all([
     fetchTrades({ since, limit: 200 }),
     fetchCategories(),
+    fetchTopMarkets({ since, limit: 5 }),
+    fetchTopWallets({ since, limit: 6 }),
   ]);
 
   return (
     <Shell>
-      <Dashboard trades={trades} categories={categories} />
+      <Dashboard
+        trades={trades}
+        categories={categories}
+        topMarkets={topMarkets}
+        topWallets={topWallets}
+      />
     </Shell>
   );
 }

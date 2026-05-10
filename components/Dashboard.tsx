@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { Trade } from "@/lib/types";
+import type { Trade, TopMarket, TopWallet } from "@/lib/types";
 import { summarize } from "@/lib/queries";
 import { fmt } from "@/lib/fmt";
 import { KpiCard } from "@/components/KpiCard";
@@ -11,6 +11,8 @@ import { TimeWindowToggle } from "@/components/TimeWindowToggle";
 import { CategoryChips } from "@/components/CategoryChips";
 import { Card } from "@/components/Card";
 import { Feed } from "@/components/Feed";
+import { MarketRow } from "@/components/MarketRow";
+import { WalletRow } from "@/components/WalletRow";
 import { useRealtime } from "@/components/RealtimeProvider";
 
 const FEED_CAP = 200;
@@ -23,9 +25,13 @@ const NEW_FLASH_MS = 1700; // matches pa-row-in animation duration
 export function Dashboard({
   trades,
   categories,
+  topMarkets,
+  topWallets,
 }: {
   trades: Trade[];
   categories: string[];
+  topMarkets: TopMarket[];
+  topWallets: TopWallet[];
 }) {
   const params = useSearchParams();
   const { onTrade } = useRealtime();
@@ -148,7 +154,38 @@ export function Dashboard({
         >
           <Feed trades={filtered} newIds={newIds} />
         </Card>
-        <div className="flex flex-col gap-3" />
+
+        <div className="flex min-h-0 flex-col gap-3">
+          <Card title="Hot markets" subtitle="By notional in window">
+            <div className="overflow-y-auto">
+              {topMarkets.length === 0 ? (
+                <div className="px-3.5 py-6 text-[12.5px] text-fg-dim">
+                  No scored markets in this window yet.
+                </div>
+              ) : (
+                topMarkets.map((m) => <MarketRow key={m.id} market={m} />)
+              )}
+            </div>
+          </Card>
+
+          <Card
+            title="Top wallets"
+            subtitle="By notional in window"
+            className="flex-1"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {topWallets.length === 0 ? (
+                <div className="px-3.5 py-6 text-[12.5px] text-fg-dim">
+                  No scored wallet activity in this window yet.
+                </div>
+              ) : (
+                topWallets.map((w, i) => (
+                  <WalletRow key={w.wallet} wallet={w} rank={i + 1} />
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
       </section>
     </>
   );
