@@ -9,6 +9,8 @@ import { KpiCard } from "@/components/KpiCard";
 import { ThresholdSlider } from "@/components/ThresholdSlider";
 import { TimeWindowToggle } from "@/components/TimeWindowToggle";
 import { CategoryChips } from "@/components/CategoryChips";
+import { Card } from "@/components/Card";
+import { Feed } from "@/components/Feed";
 
 // Client wrapper around the dashboard contents. The RSC fetches trades by
 // time window only; everything else (score threshold, categories, search
@@ -85,6 +87,25 @@ export function Dashboard({
           }
         />
         <KpiCard label="MARKETS TOUCHED" value={k.markets} />
+      </section>
+
+      {/* Main grid: feed on the left, right stack lands in task 8 */}
+      <section
+        className="grid min-h-0 flex-1 gap-3 px-[18px] pb-[18px]"
+        style={{ gridTemplateColumns: "1.6fr 1fr" }}
+      >
+        <Card
+          title="Live anomaly feed"
+          right={
+            <span className="flex items-center gap-2 text-[11.5px] text-fg-dim">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-green" />
+              auto-refresh on · click row to inspect
+            </span>
+          }
+        >
+          <Feed trades={filtered} />
+        </Card>
+        <div className="flex flex-col gap-3" />
       </section>
     </>
   );

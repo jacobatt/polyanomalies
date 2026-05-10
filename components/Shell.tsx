@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/SearchInput";
 // to ?q; the Live indicator is a static stub until task 7 (realtime).
 export function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-11 items-center gap-6 border-b border-border px-[18px]">
         <Link href="/" className="flex items-center gap-2.5 no-underline">
           <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-green font-mono text-[12px] font-bold text-[#0a1a0d]">
@@ -33,7 +33,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
     </div>
   );
 }

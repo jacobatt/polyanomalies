@@ -30,7 +30,7 @@ export default function RootLayout({
       data-density="comfortable"
       className={`${sans.variable} ${mono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="h-full flex flex-col">{children}</body>
     </html>
   );
 }
