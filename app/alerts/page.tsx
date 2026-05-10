@@ -1,12 +1,22 @@
 import { Shell } from "@/components/Shell";
+import { AlertsClient } from "@/components/AlertsClient";
+import { fetchAlertRules } from "@/lib/queries";
 
-export default function AlertsPage() {
+export const dynamic = "force-dynamic";
+
+export const metadata = { title: "Alerts · PolyAnomalies" };
+
+export default async function AlertsPage() {
+  let rules: Awaited<ReturnType<typeof fetchAlertRules>> = [];
+  try {
+    rules = await fetchAlertRules();
+  } catch {
+    // Surface as empty list — initial-render auth/RLS errors are recoverable
+    // by refresh once the user creates a rule.
+  }
   return (
     <Shell>
-      <section className="px-[18px] py-6">
-        <h1 className="text-[18px] font-semibold tracking-[-0.01em]">Alerts</h1>
-        <p className="mt-2 text-fg-dim">Rule configuration — wire-up in task 12.</p>
-      </section>
+      <AlertsClient initialRules={rules} />
     </Shell>
   );
 }

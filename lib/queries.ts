@@ -10,6 +10,8 @@ import type {
   TopMarket,
   TopWallet,
   TradeDetail,
+  AlertRule,
+  AlertCondition,
 } from "./types";
 
 const ANOMALY_SCORE = 4;
@@ -377,6 +379,30 @@ export async function fetchTradeDetail(id: string): Promise<TradeDetail | null> 
     .reverse();
 
   return { trade, sameWallet, sameMarket, series };
+}
+
+/** Trade matches an alert rule's conditions. Used by both the preview API
+ *  (sample matches in last 24h) and the alert worker (per-event evaluation). */
+export function tradeMatchesRule(t: Trade, c: AlertCondition): boolean {
+  if (c.min_score != null && (t.score ?? -Infinity) < c.min_score) return false;
+  if (c.min_notional != null && t.notional < c.min_notional) return false;
+  if (c.counter_trend_only && !t.counterTrend) return false;
+  if (c.categories?.length) {
+    if (!t.market.category || !c.categories.includes(t.market.category)) return false;
+  }
+  if (c.wallets?.length && !c.wallets.includes(t.wallet.wallet)) return false;
+  if (c.markets?.length && !c.markets.includes(t.market.id)) return false;
+  return true;
+}
+
+export async function fetchAlertRules(): Promise<AlertRule[]> {
+  const sb = serverAnonClient();
+  const { data, error } = await sb
+    .from("alert_rules")
+    .select("id, name, enabled, conditions, channel, webhook_url, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`fetchAlertRules: ${error.message}`);
+  return (data ?? []) as AlertRule[];
 }
 
 /** Distinct non-null categories, sourced from the `markets` view (one row
