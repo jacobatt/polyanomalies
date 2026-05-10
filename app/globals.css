@@ -11,7 +11,7 @@
 
   --fg:           #e6e8eb;
   --fg-dim:       #9aa0a8;
-  --fg-faint:     #5a6068;
+  --fg-faint:     #7f8590;   /* bumped from #5a6068 for WCAG AA — old was 2.83:1 against surface */
 
   --green:        #22c55e;
   --green-soft:   rgba(34, 197, 94, 0.12);
