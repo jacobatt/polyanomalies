@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Trade } from "@/lib/types";
 import { FEED_GRID, FeedRow } from "@/components/FeedRow";
+import { EmptyState } from "@/components/States";
 
 const FEED_CAP = 200;
 const ROW_ESTIMATE = 48; // px — close to actual; virtualizer measures real
@@ -52,8 +53,11 @@ export function Feed({
       </div>
 
       {list.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-4 py-8 text-[12.5px] text-fg-dim">
-          No trades match these filters in this window.
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState
+            headline="No trades match"
+            sub="Loosen the threshold, widen the window, or clear the search box."
+          />
         </div>
       ) : (
         <div

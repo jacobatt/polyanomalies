@@ -67,3 +67,8 @@ body {
 
 .pa-row-in { animation: pa-row-in 1.6s ease-out 1; }
 .pa-blink  { animation: pa-blink 1.1s ease-in-out infinite; }
+
+@keyframes pa-shimmer {
+  0%   { background-position: 200% 0 }
+  100% { background-position: -200% 0 }
+}
