@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SearchInput } from "@/components/SearchInput";
 
 // Top app bar shared by every desktop page. Matches the desk-dashboard
-// artboard's nav strip. The live pulse + search + alerts-count badge are
-// stubbed for Phase 1 and wired up in later tasks (realtime, search filter,
-// alerts feed).
+// artboard's nav strip. The SearchInput is a client component that syncs
+// to ?q; the Live indicator is a static stub until task 7 (realtime).
 export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-col">
@@ -29,6 +29,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-green" />
             Live
           </span>
+          <SearchInput />
         </div>
       </header>
 

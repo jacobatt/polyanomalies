@@ -1,12 +1,26 @@
 import { Shell } from "@/components/Shell";
+import { Dashboard } from "@/components/Dashboard";
+import { fetchTrades, fetchCategories, parseSince } from "@/lib/queries";
 
-export default function Page() {
+export const dynamic = "force-dynamic";
+
+type SP = { since?: string };
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<SP>;
+}) {
+  const sp = await searchParams;
+  const since = parseSince(sp.since);
+  const [trades, categories] = await Promise.all([
+    fetchTrades({ since, limit: 200 }),
+    fetchCategories(),
+  ]);
+
   return (
     <Shell>
-      <section className="px-[18px] py-6">
-        <h1 className="text-[18px] font-semibold tracking-[-0.01em]">Anomaly monitor</h1>
-        <p className="mt-2 text-fg-dim">Dashboard placeholder — wire-up in tasks 4–8.</p>
-      </section>
+      <Dashboard trades={trades} categories={categories} />
     </Shell>
   );
 }

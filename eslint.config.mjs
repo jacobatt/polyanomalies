@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Babel-standalone prototype uses window globals — ESLint can't
+    // resolve them and these files are out of scope for the Next port.
+    "prototype/**",
   ]),
 ]);
 
