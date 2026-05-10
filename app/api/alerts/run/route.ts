@@ -136,8 +136,11 @@ export async function GET(req: Request) {
   });
 }
 
+const DASHBOARD_BASE =
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://polyanomalies.vercel.app";
+
 function buildEmbed(trade: Trade, rule: AlertRule) {
-  const dashboard = `https://polyanomalies.example/?trade=${encodeURIComponent(trade.id)}`;
+  const dashboard = `${DASHBOARD_BASE}/?trade=${encodeURIComponent(trade.id)}`;
   const wallet = trade.wallet.wallet;
   return {
     embeds: [
