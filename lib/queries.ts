@@ -153,6 +153,168 @@ export async function fetchTopWallets(opts: { since: number; limit?: number }): 
     .slice(0, opts.limit ?? 20);
 }
 
+export interface MarketDetail {
+  id: string;
+  title: string;
+  slug: string | null;
+  category: string | null;
+  endDate: string | null;
+  series: { ts: number; price: number }[];
+  trades: Trade[];                // recent scored trades on this market
+  notional: number;
+  tradeCount: number;
+  anomalyCount: number;
+}
+
+/** Per-market drilldown: metadata + dense price series + recent scored
+ *  trades. Defaults to a 7-day window for the chart density. */
+export async function fetchMarketDetail(
+  id: string,
+  windowSeconds = 7 * 86400,
+): Promise<MarketDetail | null> {
+  const sb = serverAnonClient();
+  const since = Math.floor(Date.now() / 1000) - windowSeconds;
+
+  // Top row for metadata (title/category/end_date).
+  const { data: head } = await sb
+    .from("trades")
+    .select("condition_id, title, slug, category, market_end_date")
+    .eq("condition_id", id)
+    .order("timestamp", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!head) return null;
+
+  const select = [
+    "id", "timestamp", "condition_id", "title", "slug", "category",
+    "proxy_wallet", "asset", "side", "outcome", "outcome_index",
+    "size", "price", "notional", "transaction_hash",
+    "name", "pseudonym", "score", "notional_score", "counter_trend",
+  ].join(",");
+
+  const [seriesRes, tradesRes] = await Promise.all([
+    sb
+      .from("trades")
+      .select("timestamp, price")
+      .eq("condition_id", id)
+      .gte("timestamp", since)
+      .order("timestamp", { ascending: true })
+      .limit(2000),
+    sb
+      .from("trades")
+      .select(select)
+      .eq("condition_id", id)
+      .gte("timestamp", since)
+      .not("score", "is", null)
+      .order("timestamp", { ascending: false })
+      .limit(200),
+  ]);
+
+  const series = (seriesRes.data ?? []).map(
+    (r: { timestamp: number; price: number | string }) => ({
+      ts: Number(r.timestamp) * 1000,
+      price: Number(r.price),
+    }),
+  );
+  const trades = (tradesRes.data ?? []).map((r) =>
+    rowToTrade(r as unknown as TradeRow),
+  );
+
+  return {
+    id,
+    title: head.title ?? "(unknown market)",
+    slug: head.slug,
+    category: head.category,
+    endDate: head.market_end_date,
+    series,
+    trades,
+    notional: trades.reduce((s, t) => s + t.notional, 0),
+    tradeCount: trades.length,
+    anomalyCount: trades.filter((t) => (t.score ?? 0) >= ANOMALY_SCORE).length,
+  };
+}
+
+export interface WalletDetail {
+  wallet: string;
+  name: string | null;
+  pseudonym: string | null;
+  trades: Trade[];                  // recent trades, any score
+  totalNotional: number;
+  tradeCount: number;
+  marketCount: number;
+  /** Cumulative signed notional over time (BUY +, SELL -). v1 PnL stand-in
+   *  until we have settlement data. Each point is at a trade's timestamp. */
+  pnlSeries: { ts: number; value: number }[];
+  /** Top 6 markets this wallet has touched, with notional spread. */
+  exposure: { id: string; title: string; notional: number }[];
+}
+
+export async function fetchWalletDetail(
+  wallet: string,
+  windowSeconds = 30 * 86400,
+): Promise<WalletDetail | null> {
+  const sb = serverAnonClient();
+  const since = Math.floor(Date.now() / 1000) - windowSeconds;
+
+  const select = [
+    "id", "timestamp", "condition_id", "title", "slug", "category",
+    "proxy_wallet", "asset", "side", "outcome", "outcome_index",
+    "size", "price", "notional", "transaction_hash",
+    "name", "pseudonym", "score", "notional_score", "counter_trend",
+  ].join(",");
+
+  const { data: rows } = await sb
+    .from("trades")
+    .select(select)
+    .eq("proxy_wallet", wallet)
+    .gte("timestamp", since)
+    .order("timestamp", { ascending: false })
+    .limit(500);
+
+  const trades = (rows ?? []).map((r) =>
+    rowToTrade(r as unknown as TradeRow),
+  );
+  if (trades.length === 0) return null;
+
+  const head = trades[0];
+  const totalNotional = trades.reduce((s, t) => s + t.notional, 0);
+
+  // Market exposure
+  const byMarket = new Map<string, { id: string; title: string; notional: number }>();
+  for (const t of trades) {
+    const cur = byMarket.get(t.market.id) ?? {
+      id: t.market.id,
+      title: t.market.title,
+      notional: 0,
+    };
+    cur.notional += t.notional;
+    byMarket.set(t.market.id, cur);
+  }
+  const exposure = [...byMarket.values()]
+    .sort((a, b) => b.notional - a.notional)
+    .slice(0, 6);
+
+  // Cumulative signed notional, chronological order
+  const chronological = [...trades].reverse();
+  let running = 0;
+  const pnlSeries: { ts: number; value: number }[] = chronological.map((t) => {
+    running += t.side === "BUY" ? t.notional : -t.notional;
+    return { ts: t.ts, value: running };
+  });
+
+  return {
+    wallet,
+    name: head.wallet.name,
+    pseudonym: head.wallet.pseudonym,
+    trades,
+    totalNotional,
+    tradeCount: trades.length,
+    marketCount: byMarket.size,
+    pnlSeries,
+    exposure,
+  };
+}
+
 /** Single-trade detail for the drawer: focal trade + 6 most-recent scored
  *  trades by the same wallet + 6 most-recent scored trades on the same
  *  market, plus a sparse price series for the mini chart. Returns null
