@@ -4,7 +4,13 @@
 
 import { serverAnonClient } from "./supabase";
 import { rowToTrade } from "./mappers";
-import type { Trade, TradeRow, TopMarket, TopWallet } from "./types";
+import type {
+  Trade,
+  TradeRow,
+  TopMarket,
+  TopWallet,
+  TradeDetail,
+} from "./types";
 
 const ANOMALY_SCORE = 4;
 const AGGREGATION_LIMIT = 5000;     // upper bound on rows pulled for top-N rollups
@@ -145,6 +151,70 @@ export async function fetchTopWallets(opts: { since: number; limit?: number }): 
   return [...byWallet.values()]
     .sort((a, b) => b.notional - a.notional)
     .slice(0, opts.limit ?? 20);
+}
+
+/** Single-trade detail for the drawer: focal trade + 6 most-recent scored
+ *  trades by the same wallet + 6 most-recent scored trades on the same
+ *  market, plus a sparse price series for the mini chart. Returns null
+ *  when the focal trade isn't in the table. */
+export async function fetchTradeDetail(id: string): Promise<TradeDetail | null> {
+  const sb = serverAnonClient();
+  const select = [
+    "id", "timestamp", "condition_id", "title", "slug", "category",
+    "proxy_wallet", "asset", "side", "outcome", "outcome_index",
+    "size", "price", "notional", "transaction_hash",
+    "name", "pseudonym", "score", "notional_score", "counter_trend",
+  ].join(",");
+
+  const { data: row, error } = await sb
+    .from("trades")
+    .select(select)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(`fetchTradeDetail: ${error.message}`);
+  if (!row) return null;
+  const trade = rowToTrade(row as unknown as TradeRow);
+
+  const [sameWalletRes, sameMarketRes, seriesRes] = await Promise.all([
+    sb
+      .from("trades")
+      .select(select)
+      .eq("proxy_wallet", trade.wallet.wallet)
+      .neq("id", id)
+      .not("score", "is", null)
+      .order("timestamp", { ascending: false })
+      .limit(6),
+    sb
+      .from("trades")
+      .select(select)
+      .eq("condition_id", trade.market.id)
+      .neq("id", id)
+      .not("score", "is", null)
+      .order("timestamp", { ascending: false })
+      .limit(6),
+    // Series uses *all* trades (not just scored) so the chart isn't sparse.
+    sb
+      .from("trades")
+      .select("timestamp, price")
+      .eq("condition_id", trade.market.id)
+      .order("timestamp", { ascending: false })
+      .limit(80),
+  ]);
+
+  const sameWallet = (sameWalletRes.data ?? []).map((r) =>
+    rowToTrade(r as unknown as TradeRow),
+  );
+  const sameMarket = (sameMarketRes.data ?? []).map((r) =>
+    rowToTrade(r as unknown as TradeRow),
+  );
+  const series: TradeDetail["series"] = (seriesRes.data ?? [])
+    .map((r: { timestamp: number; price: number | string }) => ({
+      ts: Number(r.timestamp) * 1000,
+      price: Number(r.price),
+    }))
+    .reverse();
+
+  return { trade, sameWallet, sameMarket, series };
 }
 
 /** Distinct non-null categories, sourced from the `markets` view (one row

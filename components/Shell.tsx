@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { SearchInput } from "@/components/SearchInput";
 import { LiveStatus } from "@/components/LiveStatus";
+import { TradeDrawer } from "@/components/TradeDrawer";
 
 // Top app bar shared by every desktop page. Matches the desk-dashboard
 // artboard's nav strip. The SearchInput is a client component that syncs
@@ -32,6 +33,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+      <TradeDrawer />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useUrlState } from "@/lib/urlState";
 import type { Trade, TopMarket, TopWallet } from "@/lib/types";
 import { summarize } from "@/lib/queries";
 import { fmt } from "@/lib/fmt";
@@ -34,6 +35,7 @@ export function Dashboard({
   topWallets: TopWallet[];
 }) {
   const params = useSearchParams();
+  const { setParam } = useUrlState();
   const { onTrade } = useRealtime();
 
   // Realtime trades layered on top of the SSR'd window. Keyed by id so
@@ -152,7 +154,11 @@ export function Dashboard({
             </span>
           }
         >
-          <Feed trades={filtered} newIds={newIds} />
+          <Feed
+            trades={filtered}
+            newIds={newIds}
+            onTradeClick={(t) => setParam("trade", t.id)}
+          />
         </Card>
 
         <div className="flex min-h-0 flex-col gap-3">

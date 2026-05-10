@@ -54,6 +54,18 @@ export interface AlertRule {
   created_at: string;      // ISO 8601
 }
 
+export interface PricePoint {
+  ts: number;        // ms epoch
+  price: number;
+}
+
+export interface TradeDetail {
+  trade: Trade;
+  sameWallet: Trade[];
+  sameMarket: Trade[];
+  series: PricePoint[];   // chronological, ts asc
+}
+
 // Aggregations for the right-column cards.
 
 export interface TopMarket {
