@@ -102,8 +102,8 @@ export function Dashboard({
   return (
     <>
       {/* Control row: title + time toggle + threshold slider + match count */}
-      <div className="flex items-center gap-2.5 border-b border-border px-[18px] py-3">
-        <h1 className="mr-2.5 text-[18px] font-semibold tracking-[-0.01em]">
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-3 py-3 md:px-[18px]">
+        <h1 className="mr-2.5 text-[16px] font-semibold tracking-[-0.01em] md:text-[18px]">
           Anomaly monitor
         </h1>
         <TimeWindowToggle />
@@ -116,33 +116,44 @@ export function Dashboard({
 
       <CategoryChips categories={categories} />
 
-      {/* KPI band — 5 cards per the desk-dashboard artboard */}
+      {/* KPI band — 5 cards. Desktop: 1.4fr/1fr/1fr/1fr/1fr grid. Mobile:
+          horizontal-scrolling strip per spec.md mobile rules. */}
       <section
-        className="grid gap-3 px-[18px] py-3.5"
+        className="-mx-3 flex gap-3 overflow-x-auto px-3 py-3.5 [scrollbar-width:none] md:mx-0 md:grid md:overflow-visible md:px-[18px]"
         style={{ gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1fr" }}
       >
-        <KpiCard
-          label="24H NOTIONAL"
-          value={fmt.usd(k.notional, { compact: true })}
-          accent
-        />
-        <KpiCard label="ANOMALIES" value={k.anomalies} />
-        <KpiCard label="WHALE TRADES" value={k.whales} sub="≥ $1M" />
-        <KpiCard
-          label="COUNTER-TREND"
-          value={k.counterTrend}
-          sub={
-            k.anomalies > 0
-              ? `${Math.round((k.counterTrend / k.anomalies) * 100)}%`
-              : undefined
-          }
-        />
-        <KpiCard label="MARKETS TOUCHED" value={k.markets} />
+        <div className="min-w-[200px] flex-none md:min-w-0">
+          <KpiCard
+            label="24H NOTIONAL"
+            value={fmt.usd(k.notional, { compact: true })}
+            accent
+          />
+        </div>
+        <div className="min-w-[140px] flex-none md:min-w-0">
+          <KpiCard label="ANOMALIES" value={k.anomalies} />
+        </div>
+        <div className="min-w-[140px] flex-none md:min-w-0">
+          <KpiCard label="WHALE TRADES" value={k.whales} sub="≥ $1M" />
+        </div>
+        <div className="min-w-[140px] flex-none md:min-w-0">
+          <KpiCard
+            label="COUNTER-TREND"
+            value={k.counterTrend}
+            sub={
+              k.anomalies > 0
+                ? `${Math.round((k.counterTrend / k.anomalies) * 100)}%`
+                : undefined
+            }
+          />
+        </div>
+        <div className="min-w-[140px] flex-none md:min-w-0">
+          <KpiCard label="MARKETS TOUCHED" value={k.markets} />
+        </div>
       </section>
 
-      {/* Main grid: feed on the left, right stack lands in task 8 */}
+      {/* Main grid: single-column below md, 1.6fr/1fr above. */}
       <section
-        className="grid min-h-0 flex-1 gap-3 px-[18px] pb-[18px]"
+        className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 md:grid md:px-[18px] md:pb-[18px]"
         style={{ gridTemplateColumns: "1.6fr 1fr" }}
       >
         <Card
