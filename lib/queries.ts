@@ -2,7 +2,7 @@
 // Always filters to scored rows (score IS NOT NULL) — sub-$50k trades are
 // "not applicable to whale anomaly detection" per spec.md, not score-zero.
 
-import { serverAnonClient } from "./supabase";
+import { serverAnonClient, serverServiceClient } from "./supabase";
 import { rowToTrade } from "./mappers";
 import type {
   Trade,
@@ -395,8 +395,11 @@ export function tradeMatchesRule(t: Trade, c: AlertCondition): boolean {
   return true;
 }
 
+// alert_rules has no anon RLS policy — server-only data, so this uses
+// the service-role client. Safe because every caller (`/alerts` RSC,
+// `/api/alerts` route, the worker) runs server-side.
 export async function fetchAlertRules(): Promise<AlertRule[]> {
-  const sb = serverAnonClient();
+  const sb = serverServiceClient();
   const { data, error } = await sb
     .from("alert_rules")
     .select("id, name, enabled, conditions, channel, webhook_url, created_at")
