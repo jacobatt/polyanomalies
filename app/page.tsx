@@ -10,6 +10,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Anomaly monitor",
+};
+
 type SP = { since?: string };
 
 export default async function Page({

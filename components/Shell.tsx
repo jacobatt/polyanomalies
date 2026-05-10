@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { SearchInput } from "@/components/SearchInput";
 import { LiveStatus } from "@/components/LiveStatus";
 import { TradeDrawer } from "@/components/TradeDrawer";
@@ -26,7 +26,9 @@ export function Shell({ children }: { children: ReactNode }) {
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
           <LiveStatus />
-          <SearchInput />
+          <Suspense fallback={null}>
+            <SearchInput />
+          </Suspense>
         </div>
       </header>
 
@@ -53,7 +55,9 @@ export function Shell({ children }: { children: ReactNode }) {
         <BottomTab href="/alerts" label="Alerts" />
       </nav>
 
-      <TradeDrawer />
+      <Suspense fallback={null}>
+        <TradeDrawer />
+      </Suspense>
     </div>
   );
 }

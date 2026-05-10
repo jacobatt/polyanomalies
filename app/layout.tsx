@@ -18,8 +18,21 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PolyAnomalies",
+  title: {
+    default: "PolyAnomalies",
+    template: "%s · PolyAnomalies",
+  },
   description: "Whale & anomaly monitor for Polymarket prediction markets.",
+  openGraph: {
+    title: "PolyAnomalies",
+    description: "Whale & anomaly monitor for Polymarket prediction markets.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "PolyAnomalies",
+    description: "Whale & anomaly monitor for Polymarket prediction markets.",
+  },
 };
 
 export default function RootLayout({
