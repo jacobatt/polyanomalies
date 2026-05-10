@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SearchInput } from "@/components/SearchInput";
+import { LiveStatus } from "@/components/LiveStatus";
 
 // Top app bar shared by every desktop page. Matches the desk-dashboard
 // artboard's nav strip. The SearchInput is a client component that syncs
@@ -25,10 +26,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="flex items-center gap-1.5 text-[11.5px] text-fg-dim">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-green" />
-            Live
-          </span>
+          <LiveStatus />
           <SearchInput />
         </div>
       </header>

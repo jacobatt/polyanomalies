@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { RealtimeProvider } from "@/components/RealtimeProvider";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -30,7 +31,9 @@ export default function RootLayout({
       data-density="comfortable"
       className={`${sans.variable} ${mono.variable} h-full`}
     >
-      <body className="h-full flex flex-col">{children}</body>
+      <body className="h-full flex flex-col">
+        <RealtimeProvider>{children}</RealtimeProvider>
+      </body>
     </html>
   );
 }

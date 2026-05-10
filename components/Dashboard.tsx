@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Trade } from "@/lib/types";
 import { summarize } from "@/lib/queries";
@@ -11,6 +11,10 @@ import { TimeWindowToggle } from "@/components/TimeWindowToggle";
 import { CategoryChips } from "@/components/CategoryChips";
 import { Card } from "@/components/Card";
 import { Feed } from "@/components/Feed";
+import { useRealtime } from "@/components/RealtimeProvider";
+
+const FEED_CAP = 200;
+const NEW_FLASH_MS = 1700; // matches pa-row-in animation duration
 
 // Client wrapper around the dashboard contents. The RSC fetches trades by
 // time window only; everything else (score threshold, categories, search
@@ -24,6 +28,45 @@ export function Dashboard({
   categories: string[];
 }) {
   const params = useSearchParams();
+  const { onTrade } = useRealtime();
+
+  // Realtime trades layered on top of the SSR'd window. Keyed by id so
+  // re-broadcasts (e.g. INSERT then UPDATE-with-score) collapse to one row.
+  const [liveTrades, setLiveTrades] = useState<Trade[]>([]);
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    return onTrade((t) => {
+      setLiveTrades((prev) => {
+        const without = prev.filter((p) => p.id !== t.id);
+        return [t, ...without].slice(0, FEED_CAP);
+      });
+      setNewIds((prev) => {
+        const next = new Set(prev);
+        next.add(t.id);
+        return next;
+      });
+      // Drop the new-ID flag after the entry animation runs.
+      setTimeout(() => {
+        setNewIds((prev) => {
+          if (!prev.has(t.id)) return prev;
+          const next = new Set(prev);
+          next.delete(t.id);
+          return next;
+        });
+      }, NEW_FLASH_MS);
+    });
+  }, [onTrade]);
+
+  // Merge SSR + live, dedup by id, keep newest order. Live entries land at
+  // the top because liveTrades is prepend-on-arrival; SSR list is by ts desc.
+  const merged = useMemo(() => {
+    const liveIds = new Set(liveTrades.map((t) => t.id));
+    return [...liveTrades, ...trades.filter((t) => !liveIds.has(t.id))].slice(
+      0,
+      FEED_CAP,
+    );
+  }, [trades, liveTrades]);
 
   const minScore = parseFloat(params.get("min_score") ?? "0");
   const catList = (params.get("categories") ?? "")
@@ -33,7 +76,7 @@ export function Dashboard({
   const q = (params.get("q") ?? "").toLowerCase();
 
   const filtered = useMemo(() => {
-    return trades.filter((t) => {
+    return merged.filter((t) => {
       if ((t.score ?? -Infinity) < minScore) return false;
       if (catList.length > 0) {
         if (!t.market.category || !catList.includes(t.market.category)) return false;
@@ -44,7 +87,7 @@ export function Dashboard({
       }
       return true;
     });
-  }, [trades, minScore, catList, q]);
+  }, [merged, minScore, catList, q]);
 
   const k = summarize(filtered);
 
@@ -59,7 +102,7 @@ export function Dashboard({
         <ThresholdSlider />
         <span className="ml-auto text-[11.5px] text-fg-dim">
           <span className="font-semibold text-fg">{filtered.length}</span> of{" "}
-          {trades.length} trades match
+          {merged.length} trades match
         </span>
       </div>
 
@@ -103,7 +146,7 @@ export function Dashboard({
             </span>
           }
         >
-          <Feed trades={filtered} />
+          <Feed trades={filtered} newIds={newIds} />
         </Card>
         <div className="flex flex-col gap-3" />
       </section>
