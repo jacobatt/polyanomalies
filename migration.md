@@ -81,9 +81,9 @@ INSERT INTO cron_state (key, value) VALUES ('alerts_last_run', now());
 
 ### 4. Backfill score for existing rows (one-off)
 
-After updating `ingest.py` (next section), run `backfill_scores.py` once. It calls `score.score_recent(hours=LOOKBACK_DAYS*24)` (which loads >= $50k trades from the last 30 days) and bulk-UPDATEs `score`, `notional_score`, `counter_trend` by id.
+After updating `ingest.py` (next section), run `backfill_scores.py` once. It calls `score.score_recent(hours=LOOKBACK_DAYS*24)` (which loads >= $30k trades from the last 30 days) and bulk-UPDATEs `score`, `notional_score`, `counter_trend` by id.
 
-Sub-$50k rows stay NULL — the column is intentionally nullable, the partial index `WHERE score IS NOT NULL` only covers scoreable rows, and SQL three-valued logic excludes NULL rows from `score >= N` filters automatically.
+Sub-$30k rows stay NULL — the column is intentionally nullable, the partial index `WHERE score IS NOT NULL` only covers scoreable rows, and SQL three-valued logic excludes NULL rows from `score >= N` filters automatically.
 
 If the table has rows older than 30 days that need scores, replace `score_recent` with `score_window(0)` for that one run.
 

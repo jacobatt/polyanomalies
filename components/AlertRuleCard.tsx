@@ -140,7 +140,7 @@ export function AlertRuleCard({
         <Field label="Min notional ($)">
           <input
             type="number"
-            step="50000"
+            step="30000"
             min="0"
             value={draft.conditions.min_notional ?? ""}
             onChange={(e) => {

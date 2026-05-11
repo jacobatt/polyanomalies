@@ -1,5 +1,5 @@
 // Server-side trade queries shared by RSC pages and the /api/trades route.
-// Always filters to scored rows (score IS NOT NULL) — sub-$50k trades are
+// Always filters to scored rows (score IS NOT NULL) — sub-$30k trades are
 // "not applicable to whale anomaly detection" per spec.md, not score-zero.
 
 import { serverAnonClient, serverServiceClient } from "./supabase";
