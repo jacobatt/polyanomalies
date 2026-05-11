@@ -12,10 +12,22 @@ const FALLBACK_WEBHOOK = process.env.DISCORD_WEBHOOK_URL ?? null;
 
 // Hit GET /api/alerts/run to evaluate enabled rules against trades inserted
 // since cron_state.alerts_last_run, then update the watermark. Pass
-// ?dry_run=false to actually POST to Discord — default is logging only,
-// per the dev-safety constraint. No vercel.json cron yet; that's deferred
-// to post-cutover.
+// ?dry_run=false to actually POST to Discord — default is logging only.
+// Vercel cron is wired in vercel.json with ?dry_run=false in the path.
+//
+// Auth: when CRON_SECRET env is set, require Authorization: Bearer <secret>.
+// Vercel cron injects this header automatically. When CRON_SECRET is unset,
+// the route is open — keeps migrations + manual hits working without
+// breaking the deploy mid-cutover.
 export async function GET(req: Request) {
+  const expected = process.env.CRON_SECRET;
+  if (expected) {
+    const auth = req.headers.get("authorization");
+    if (auth !== `Bearer ${expected}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   const url = new URL(req.url);
   const dryRun = url.searchParams.get("dry_run") !== "false";
   const sb = serverServiceClient();
